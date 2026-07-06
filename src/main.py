@@ -1,5 +1,4 @@
 import cv2
-import json
 from hand_tracking import HandTracker
 from play_notes import SoundPlayer
 
@@ -8,15 +7,8 @@ LEFT_HAND_NOTES = ['C4', 'D4', 'E4', 'F4', 'G4']
 RIGHT_HAND_NOTES = ['A4', 'B4', 'C5', 'D5', 'E5']
 NOTES = LEFT_HAND_NOTES + RIGHT_HAND_NOTES
 
-# Load pre-calibrated desk edge position
-try:
-    with open("desk_edge_calibration.json", "r") as f:
-        edge_data = json.load(f)
-        edge_y = edge_data["edge_y"]
-        print(f"Loaded desk edge position: {edge_y}")
-except FileNotFoundError:
-    print("Desk edge calibration file not found. Please run 'desk_edge_calibration.py' first.")
-    exit(1)
+# Virtual desk edge = top of piano keyboard overlay
+edge_y = None  # set dynamically each frame
 
 # Webcam settings
 cap = cv2.VideoCapture(0)
@@ -137,6 +129,10 @@ while True:
         fingertips_ordered.append(None)
     fingertips_ordered = fingertips_ordered[:10]
 
+    # Calculate virtual desk edge = top of keyboard overlay
+    h = frame.shape[0]
+    edge_y = h // 2 # fixed at center
+
     # Press detection
     for i, pos in enumerate(fingertips_ordered):
         if pos is None:
@@ -159,7 +155,7 @@ while True:
             color = (0, 255, 0) if finger_pressed[i] else (0, 0, 255)
             cv2.circle(frame, (int(pos[0]), int(pos[1])), 10, color, -1)
 
-    # Desk edge line
+    # Keyboard boundary line
     cv2.line(frame, (0, edge_y), (frame.shape[1], edge_y), (255, 255, 0), 2)
 
     cv2.imshow("Virtual Piano", frame)
