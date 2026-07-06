@@ -37,7 +37,7 @@ Ensure you have the following installed on your system:
 
 1. Clone this repository:
    ```bash
-   git clone https://github.com/kunal0230/Virtual_Piano_With_Computer_Vision.git
+   git clone https://github.com/0xindra/Virtual_Piano_With_Computer_Vision.git
    cd Virtual_Piano_With_Computer_Vision
 2. Install the required Python libraries:
   
