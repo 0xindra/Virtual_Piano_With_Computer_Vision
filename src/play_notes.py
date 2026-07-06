@@ -18,3 +18,11 @@ class SoundPlayer:
             note = self.notes[i]
             if note in self.sounds:
                 self.sounds[note].play()
+
+    def play_chord_by_indices(self, indices):
+        """Play multiple notes simultaneously as a chord."""
+        for i in indices:
+            if 0 <= i < len(self.notes):
+                note = self.notes[i]
+                if note in self.sounds:
+                    self.sounds[note].play()
