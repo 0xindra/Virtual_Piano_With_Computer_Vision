@@ -2,6 +2,8 @@ import cv2
 import mediapipe as mp
 import numpy as np
 from play_notes import SoundPlayer
+from touch_state_machine import TouchStateMachine
+from desk_edge_detection import find_horizontal_edge_y
 
 # Notes assigned to fingertips for left and right hands
 LEFT_HAND_NOTES = ['C4', 'D4', 'E4', 'F4', 'G4']
@@ -20,8 +22,8 @@ hands = mp_hands.Hands(static_image_mode=False, max_num_hands=2, min_detection_c
 player = SoundPlayer(LEFT_HAND_NOTES + RIGHT_HAND_NOTES)
 
 # Tracking state
-finger_pressed_left = [False] * 5  # Track pressed state for left hand fingers
-finger_pressed_right = [False] * 5  # Track pressed state for right hand fingers
+touch_states_left = [TouchStateMachine() for _ in range(5)]
+touch_states_right = [TouchStateMachine() for _ in range(5)]
 previous_positions_left = [None] * 5  # Previous fingertip positions for left hand
 previous_positions_right = [None] * 5  # Previous fingertip positions for right hand
 desk_edge_y = None  # Desk edge position
@@ -37,18 +39,7 @@ def detect_desk_edge(frame):
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     edges = cv2.Canny(gray, 50, 150)
     lines = cv2.HoughLinesP(edges, 1, np.pi / 180, 100, minLineLength=100, maxLineGap=10)
-    if lines is not None:
-        for line in lines:
-            x1, y1, x2, y2 = line[0]
-            if abs(y1 - y2) < 5:  # Horizontal line
-                return (y1 + y2) // 2  # Return the y-coordinate of the desk edge
-    return None
-
-# Calculate velocity for a fingertip
-def calculate_velocity(current, previous):
-    if current is None or previous is None:
-        return 0
-    return current[1] - previous[1]  # Change in y-coordinate
+    return find_horizontal_edge_y(lines)
 
 # Main loop
 while True:
@@ -79,7 +70,7 @@ while True:
             hand_label = results.multi_handedness[hand_idx].classification[0].label
             hand_type = "LEFT" if hand_label == "Left" else "RIGHT"
             hand_notes = LEFT_HAND_NOTES if hand_type == "LEFT" else RIGHT_HAND_NOTES
-            finger_pressed = finger_pressed_left if hand_type == "LEFT" else finger_pressed_right
+            touch_states = touch_states_left if hand_type == "LEFT" else touch_states_right
             previous_positions = previous_positions_left if hand_type == "LEFT" else previous_positions_right
 
             # Extract fingertip positions
@@ -96,21 +87,17 @@ while True:
                 landmark = hand_landmarks.landmark[landmark_idx]
                 fingertips.append((int(landmark.x * w), int(landmark.y * h)))
 
-            # Smooth and calculate velocity
+            # Smooth positions and update per-finger touch states
             for i, pos in enumerate(fingertips):
                 smoothed_pos = smooth_position(pos, previous_positions[i])
-                velocity = calculate_velocity(smoothed_pos, previous_positions[i])
                 previous_positions[i] = smoothed_pos
+                event = touch_states[i].update(smoothed_pos[1], desk_edge_y)
 
-                # Velocity-based press detection
-                if velocity > 5 and not finger_pressed[i]:  # Key press
-                    finger_pressed[i] = True
+                if event == "note_on":
                     player.play_note_by_index(LEFT_HAND_NOTES.index(hand_notes[i]) if hand_type == "LEFT" else 5 + RIGHT_HAND_NOTES.index(hand_notes[i]))
-                elif velocity < -3:  # Key release
-                    finger_pressed[i] = False
 
                 # Draw fingertips and note names
-                color = (0, 255, 0) if finger_pressed[i] else (0, 0, 255)
+                color = (0, 255, 0) if touch_states[i].is_pressed else (0, 0, 255)
                 cv2.circle(frame, (int(smoothed_pos[0]), int(smoothed_pos[1])), 10, color, -1)
                 cv2.putText(frame, hand_notes[i], (int(smoothed_pos[0]) + 10, int(smoothed_pos[1]) - 10),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
