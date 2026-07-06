@@ -178,6 +178,7 @@ while True:
         cv2.putText(frame, mode_display, (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
         cv2.putText(frame, finger_count_text, (20, 70), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
         cv2.putText(frame, chord_display, (20, 100), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 2)
+        cv2.imshow("Virtual Piano", frame)
         cv2.putText(frame, "Press m for Touch Mode", (20, frame.shape[0] - 20),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.6, (200, 200, 200), 1)
 
@@ -190,7 +191,7 @@ while True:
             cv2.putText(frame, "Desk Edge Not Detected. Please ensure the desk is visible.", (20, 30),
                         cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
             cv2.imshow("Virtual Piano", frame)
-            if cv2.waitKey(1) & 0xFF == ord(q):
+            if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
             continue
 
@@ -239,14 +240,15 @@ while True:
         mode_display = "MODE: TOUCH (desk press)"
         cv2.putText(frame, mode_display, (20, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
         cv2.rectangle(frame, (10, 10), (320, 50), (0, 0, 0), -1)
+        cv2.imshow("Virtual Piano", frame)
         cv2.putText(frame, "Press m for Chord Mode", (20, frame.shape[0] - 20),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.6, (200, 200, 200), 1)
 
     # Key handlers
     key = cv2.waitKey(1) & 0xFF
-    if key == ord(q):
+    if key == ord('q'):
         break
-    elif key == ord(m):
+    elif key == ord('m'):
         gesture_mode = not gesture_mode
         last_chord_count = -1  # Reset chord tracking on mode switch
         desk_edge_y = None if gesture_mode else None  # Re-detect desk edge when switching back
