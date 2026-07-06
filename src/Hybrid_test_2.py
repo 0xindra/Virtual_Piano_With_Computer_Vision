@@ -6,8 +6,8 @@ from touch_state_machine import TouchStateMachine
 from desk_edge_detection import find_horizontal_edge_y
 
 # Notes assigned to fingertips for left and right hands
-LEFT_HAND_NOTES = [C4, D4, E4, F4, G4]
-RIGHT_HAND_NOTES = [A4, B4, C5, D5, E5]
+LEFT_HAND_NOTES = ['C4', 'D4', 'E4', 'F4', 'G4']
+RIGHT_HAND_NOTES = ['A4', 'B4', 'C5', 'D5', 'E5']
 ALL_NOTES = LEFT_HAND_NOTES + RIGHT_HAND_NOTES  # 10 notes, indices 0-9
 
 # Chord mapping: number of raised fingers -> list of note indices to play
