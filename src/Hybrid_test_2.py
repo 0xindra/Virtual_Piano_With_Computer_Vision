@@ -231,6 +231,7 @@ while True:
         cv2.putText(frame, "MODE: TOUCH (desk press)", (20, 35), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
         cv2.putText(frame, "Press M for Chord Mode", (20, frame.shape[0] - 20),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.6, (200, 200, 200), 1)
+    cv2.imshow("Virtual Piano", frame)
 
     # Key handlers (global for both modes)
     key = cv2.waitKey(1) & 0xFF
