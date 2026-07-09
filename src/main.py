@@ -98,15 +98,6 @@ def draw_piano_overlay(frame, pressed_flags):
         cv2.rectangle(frame, (bx, by), (bx + black_key_w, by + black_key_h), color, -1)
         cv2.rectangle(frame, (bx, by), (bx + black_key_w, by + black_key_h), (10, 10, 10), 1)
 
-    # ── 3. Label section ──
-    # Current instrument label
-    instr_name = player.current_instrument.upper()
-    cv2.putText(frame, f"[{instr_name}]", (10, 25),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 200, 255), 2)
-    cv2.putText(frame, "Virtual Piano - q:quit i:instrument", (10, y_start - 8),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (200, 200, 200), 1)
-
-
 # ─── Main Loop ─────────────────────────────────────────────────
 
 while True:
@@ -161,6 +152,14 @@ while True:
 
     # Keyboard boundary line
     cv2.line(frame, (0, edge_y), (frame.shape[1], edge_y), (255, 255, 0), 2)
+
+    # ── Instrument & controls label (update every frame) ──
+    h = frame.shape[0]
+    instr_name = player.current_instrument.upper()
+    cv2.putText(frame, f"[{instr_name}]", (10, 25),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 200, 255), 2)
+    cv2.putText(frame, "Virtual Piano - q:quit i:instrument", (10, h - KEYBOARD_HEIGHT - 8),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (200, 200, 200), 1)
 
     cv2.imshow("Virtual Piano", frame)
     key = cv2.waitKey(1) & 0xFF
