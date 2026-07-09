@@ -91,5 +91,8 @@ def generate_instrument(name, notes):
     for note in notes:
         freq = NOTE_FREQ[note]
         wave = gen_func(freq)
+        # Ensure stereo (2D) — duplicate mono channel for stereo mixer
+        if wave.ndim == 1:
+            wave = np.column_stack([wave, wave])
         sounds[note] = pygame.sndarray.make_sound(wave)
     return sounds
