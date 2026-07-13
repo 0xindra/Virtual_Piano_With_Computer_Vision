@@ -31,19 +31,22 @@ class SoundPlayer:
                 self.banks[name] = {}
 
     def _init_mixer(self):
-        """Init pygame mixer, fallback dummy if no audio device."""
+        """Init pygame mixer with enough channels for chords, fallback dummy if no audio device."""
         try:
+            pygame.mixer.pre_init(frequency=44100, size=-16, channels=2, buffer=1024)
             pygame.mixer.init()
+            pygame.mixer.set_num_channels(32)
             test = pygame.mixer.Sound(buffer=bytes([0]*44))
             test.play()
             test.stop()
-            print("+ Audio device initialized (real)")
+            print(f"+ Audio device initialized (real) - " + str(pygame.mixer.get_num_channels()) + " channels")
         except pygame.error:
             print("! No audio device -- enabling dummy driver")
             os.environ['SDL_AUDIODRIVER'] = 'dummy'
             pygame.mixer.quit()
             pygame.mixer.init()
-            print("+ Audio device initialized (dummy)")
+            pygame.mixer.set_num_channels(32)
+            print(f"+ Audio device initialized (dummy) - " + str(pygame.mixer.get_num_channels()) + " channels")
 
     @property
     def current_instrument(self):
