@@ -24,6 +24,11 @@ show_instrument_menu = False
 menu_timer = 0
 MENU_DISPLAY_DURATION = 90  # ~3 seconds at 30fps
 
+# ─── Chord Mode ────────────────────────────────────────────────
+chord_mode = False
+chord_queue = set()       # finger indices currently held
+last_pressed_count = 0    # track when all fingers lift
+
 # Press detection settings
 PRESS_THRESHOLD = 5
 finger_pressed = {i: False for i in range(10)}
@@ -33,11 +38,6 @@ finger_pressed = {i: False for i in range(10)}
 # Keyboard layout: 10 white keys, note names below
 # Left hand (fingers 0-4):  C4  D4  E4  F4  G4
 # Right hand (fingers 5-9): A4  B4  C5  D5  E5
-#
-# On a real piano these would be:
-# C4 - D4 - E4 - F4 - G4 - A4 - B4 - C5 - D5 - E5
-# So the black keys would appear between:
-#  C4-D4, D4-E4, F4-G4, G4-A4, A4-B4
 BLACK_KEY_POSITIONS = [0, 1, 3, 4, 5, 7, 8]
 
 KEYBOARD_HEIGHT = 110
@@ -88,26 +88,21 @@ def draw_piano_overlay(frame, pressed_flags):
 
 
 def draw_instrument_menu(frame):
-    """Draw popup overlay showing all instruments with quick-select numbers."""
     h, w = frame.shape[:2]
     overlay = frame.copy()
     menu_w, menu_h = 380, 300
     mx = (w - menu_w) // 2
     my = (h - menu_h) // 2
 
-    # Background box
     cv2.rectangle(overlay, (mx, my), (mx + menu_w, my + menu_h), (20, 20, 20), -1)
     cv2.rectangle(overlay, (mx, my), (mx + menu_w, my + menu_h), (0, 200, 255), 2)
 
-    # Blend overlay
     alpha = 0.85
     frame[:] = cv2.addWeighted(frame, 1 - alpha, overlay, alpha, 0)
 
-    # Title
     cv2.putText(frame, "INSTRUMENTS", (mx + 20, my + 40),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0, 200, 255), 2)
 
-    # List instruments
     current = player.current_index
     for idx, name in enumerate(INSTRUMENT_NAMES):
         y_pos = my + 80 + idx * 40
@@ -123,9 +118,24 @@ def draw_instrument_menu(frame):
         cv2.putText(frame, text, (mx + 25, y_pos),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.6, text_color, 2)
 
-    # Footer
     cv2.putText(frame, "Press 1-5 to select  |  i to close", (mx + 30, my + menu_h - 15),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.45, (150, 150, 150), 1)
+
+
+def draw_chord_mode_indicator(frame, active):
+    """Show chord mode status in top-right corner."""
+    h, w = frame.shape[:2]
+    if active:
+        text = "CHORD MODE ON"
+        color = (0, 255, 255)  # yellow
+    else:
+        text = "CHORD MODE OFF"
+        color = (100, 100, 100)  # dim
+
+    (tw, th), _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)
+    x = w - tw - 15
+    y = 30
+    cv2.putText(frame, text, (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
 
 
 # ─── Main Loop ─────────────────────────────────────────────────
@@ -156,6 +166,9 @@ while True:
     h = frame.shape[0]
     edge_y = h // 2
 
+    # Count currently pressed fingers
+    currently_pressed = 0
+
     # Press detection
     for i, pos in enumerate(fingertips_ordered):
         if pos is None:
@@ -164,9 +177,27 @@ while True:
         distance_to_edge = abs(pos[1] - edge_y)
         if distance_to_edge <= PRESS_THRESHOLD and not finger_pressed[i]:
             finger_pressed[i] = True
-            player.play_note_by_index(i)
+            if chord_mode:
+                # Chord mode: queue note instead of playing immediately
+                chord_queue.add(i)
+                print(f"Chord queued: finger {i} ({NOTES[i]}) — queue: {chord_queue}")
+            else:
+                # Normal mode: play immediately
+                player.play_note_by_index(i)
         elif distance_to_edge > PRESS_THRESHOLD:
             finger_pressed[i] = False
+
+        if finger_pressed[i]:
+            currently_pressed += 1
+
+    # Chord mode: when all fingers released, play queued chord
+    if chord_mode and last_pressed_count > 0 and currently_pressed == 0 and chord_queue:
+        sorted_indices = sorted(chord_queue)
+        print(f"Playing chord: {[NOTES[i] for i in sorted_indices]}")
+        player.play_chord_by_indices(sorted_indices)
+        chord_queue.clear()
+
+    last_pressed_count = currently_pressed
 
     # Draw keyboard
     draw_piano_overlay(frame, finger_pressed)
@@ -188,8 +219,22 @@ while True:
     tx = (frame.shape[1] - text_size[0]) // 2
     cv2.putText(frame, f"[ {instr_name} ]", (tx, 30),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 200, 255), 2)
-    cv2.putText(frame, "q:quit  i:instruments", (10, h - KEYBOARD_HEIGHT - 8),
+
+    # Controls at bottom (show chord mode status)
+    mode_text = "m:chord" if not chord_mode else "m:CHORD*"
+    cv2.putText(frame, f"q:quit  i:instr  {mode_text}", (10, h - KEYBOARD_HEIGHT - 8),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.5, (200, 200, 200), 1)
+
+    # Chord mode indicator (top-right)
+    draw_chord_mode_indicator(frame, chord_mode)
+
+    # Chord queue display on screen (show queued notes in chord mode)
+    if chord_mode and chord_queue:
+        queue_text = "Chord: " + " + ".join(NOTES[i] for i in sorted(chord_queue))
+        (tw2, th2), _ = cv2.getTextSize(queue_text, cv2.FONT_HERSHEY_SIMPLEX, 0.55, 2)
+        qx = (frame.shape[1] - tw2) // 2
+        qy = 65
+        cv2.putText(frame, queue_text, (qx, qy), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 200), 2)
 
     # Instrument menu popup
     if show_instrument_menu:
@@ -208,10 +253,16 @@ while True:
         show_instrument_menu = not show_instrument_menu
         menu_timer = 0
         print(f"Instrument menu: {'shown' if show_instrument_menu else 'hidden'}")
+    elif key == ord('m'):
+        chord_mode = not chord_mode
+        chord_queue.clear()
+        print(f"Chord mode: {'ON' if chord_mode else 'OFF'}")
     elif show_instrument_menu and ord('1') <= key <= ord('9'):
         idx = key - ord('1')
         if idx < len(INSTRUMENT_NAMES):
             player.switch_instrument(idx)
+            # Play a confirmation note (C4 = index 0) so user hears the new sound
+            player.play_note_by_index(0)
             print(f"Switched to: {player.current_instrument}")
             menu_timer = 0  # keep menu open, reset timer
 
