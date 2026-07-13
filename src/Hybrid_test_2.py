@@ -165,11 +165,13 @@ while True:
         chord_display = f"Chord: {chord_name}" if chord_name else "No chord"
 
         # Draw mode indicator panel
-        cv2.rectangle(frame, (10, 10), (350, 120), (0, 0, 0), -1)
+        instr_name = player.current_instrument.upper()
+        cv2.rectangle(frame, (10, 10), (350, 155), (0, 0, 0), -1)
         cv2.putText(frame, "MODE: CHORDS (raised fingers)", (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
         cv2.putText(frame, finger_count_text, (20, 70), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
         cv2.putText(frame, chord_display, (20, 100), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 2)
-        cv2.putText(frame, "Press M for Touch Mode", (20, frame.shape[0] - 20),
+        cv2.putText(frame, f"Instr: {instr_name}", (20, 130), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (200, 200, 255), 2)
+        cv2.putText(frame, "M:Touch  I:Instrument  Q:Quit", (20, frame.shape[0] - 20),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.6, (200, 200, 200), 1)
 
     else:
@@ -227,9 +229,11 @@ while True:
         cv2.line(frame, (0, desk_edge_y), (frame.shape[1], desk_edge_y), (255, 255, 0), 2)
 
         # HUD
-        cv2.rectangle(frame, (10, 10), (320, 50), (0, 0, 0), -1)
+        instr_name = player.current_instrument.upper()
+        cv2.rectangle(frame, (10, 10), (320, 75), (0, 0, 0), -1)
         cv2.putText(frame, "MODE: TOUCH (desk press)", (20, 35), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
-        cv2.putText(frame, "Press M for Chord Mode", (20, frame.shape[0] - 20),
+        cv2.putText(frame, f"Instr: {instr_name}", (20, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (200, 200, 255), 2)
+        cv2.putText(frame, "M:Chord  I:Instrument  Q:Quit", (20, frame.shape[0] - 20),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.6, (200, 200, 200), 1)
     cv2.imshow("Virtual Piano", frame)
 
@@ -245,6 +249,9 @@ while True:
         touch_states_right = [TouchStateMachine() for _ in range(5)]
         if not gesture_mode:
             desk_edge_y = None  # Re-detect desk edge when entering touch mode
+    elif key == ord('i'):
+        instr = player.switch_instrument()
+        print(f"🔊 Switched to: {instr}")
 
 cap.release()
 cv2.destroyAllWindows()
